@@ -28,7 +28,7 @@ int startServer(int server_port)
 		sock = socket(AF_INET, SOCK_STREAM, 0);
 		if(sock == -1)
 		{
-			perror("Error: ");
+			perror("Error");
 			return 1;
 		}
 	}
@@ -38,7 +38,7 @@ int startServer(int server_port)
 		sock = socket(AF_INET, SOCK_DGRAM, 0);
 		if(sock == -1)
 		{
-			perror("Error: ");
+			perror("Error");
 			return 1;
 		}
 	}
@@ -50,7 +50,7 @@ int startServer(int server_port)
 
 	if (bind(sock, (struct sockaddr *)&server_address, sizeof(struct sockaddr)) == -1) 
 	{
-		perror("Error: ");
+		perror("Error");
 		return 2;
 	}
 
@@ -58,7 +58,7 @@ int startServer(int server_port)
 	{
 		if (listen(sock, 10) == -1)
 		{
-			printf("Error : Failed to listen\n");
+			printf("Error: Failed to listen\n");
 			return 3;
 		}
 	}
