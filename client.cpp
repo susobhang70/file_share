@@ -16,6 +16,18 @@ struct hostent *host;
 
 int connection_type;
 
+void get_Input(char *str)
+{
+	char * pch;
+	pch = strtok (str," ,.-");
+	while (pch != NULL)
+	{
+		printf ("%s\n",pch);
+		pch = strtok (NULL, " ,.-");
+	}
+
+}
+
 int startClient(int server_port)
 {
 	int sock, sin_size, link;
@@ -65,6 +77,15 @@ int startClient(int server_port)
 
 int main()
 {
+	/*
+	char *str = new char[10];
+	string temp;
+	getline(cin,temp);
+	strcpy (str, temp.c_str());
+	int local_port, server_port;
+	get_Input(str);
+	*/
+
 	int server_port;
 
 	char servername[100];
