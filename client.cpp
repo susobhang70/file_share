@@ -1,3 +1,4 @@
+#include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
 #include <sys/socket.h>
@@ -42,6 +43,8 @@ struct filestructure server_file_structure[2048];
 
 char input_command[2048], send_command[50][100], received_data[2048];
 
+ofstream client_log_file_pointer;
+
 void get_input()
 {
 	char c;
@@ -60,6 +63,9 @@ void get_input()
 	input_command[count++] = '\0';
 	count = 0;
 	send_command_count = 0;
+
+	string temps(input_command);
+	client_log_file_pointer<<temps<<"\n";
 
 	char temp[2048];
 	strcpy(temp, input_command);
@@ -224,12 +230,19 @@ int startClient(int server_port)
 	}
 
 	close(sock);
+	return -1;
 
 }
 
 
 int main()
 {
+	client_log_file_pointer.open("client_log.txt",ios::out | ios::app);
+	if(!client_log_file_pointer.is_open()){
+		cout<<"Cannot open client_log"<<endl;
+		return 0;
+	}
+	client_log_file_pointer<<"\n";
 	/*
 	char *str = new char[10];
 	string temp;
@@ -245,6 +258,7 @@ int main()
 
 	cout<<"Enter servername / serverIP: ";
 	cin>>servername;
+	client_log_file_pointer<<servername<<"\n";
 
 	host = gethostbyname(servername);
 
@@ -256,10 +270,12 @@ int main()
 
 	cout<<"Enter server port to connect to: ";
 	cin>>server_port;
+	client_log_file_pointer<<server_port<<"\n";
 
 	string type;
 	cout<<"Connection Type (tcp/udp)? ";
 	cin>>type;
+	client_log_file_pointer<<type<<"\n";
 
 	if(type == "tcp")
 		connection_type = 1;
@@ -273,9 +289,12 @@ int main()
 
 	while(1)
 	{
-		startClient(server_port);
+		int temps = startClient(server_port);
+		if(temps < 0)
+			break;
 		sleep(1);
 	}
 
+	client_log_file_pointer.close();
 	return 0;
 }
