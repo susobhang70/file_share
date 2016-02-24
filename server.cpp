@@ -57,8 +57,6 @@ int MD5(char *filename, char *checksum)
 	}
 
 	filesize = file.tellg();
-	// cout<<filesize<<" "<<filename;
-	// exit(0);
 	memoryblock = new char[filesize];
 	file.seekg(0, ios::beg);
 	file.read(memoryblock, filesize);
@@ -68,7 +66,7 @@ int MD5(char *filename, char *checksum)
 	MD5((unsigned char *) memoryblock, filesize, csum);
 
 	ostringstream os;
-    for (int i=0; i<size; i++) 
+    for (int i=0; i<MD5_DIGEST_LENGTH; i++) 
     {
         os<< hex << setw(2) << setfill('0') << (int) csum[i];
     }
@@ -97,8 +95,10 @@ void parse_request()
 
 int check_directory(char *type)
 {
+	char temp[2048];
+	strcpy(temp, type);
 	char * pch;
-	pch = strtok (type," ");
+	pch = strtok (temp," ");
 	while (pch != NULL)
 	{
 		if(!strcmp(pch, "directory"))
@@ -141,19 +141,17 @@ void sync_files()
 			getline(file_details, input);
 			file_details.close();
 
-			strcpy(file_details_command, "rm file_details");
-			system(file_details_command);
-
 			strcpy(server_file_structure[i].type, input.c_str());
+
 			strcpy(server_file_structure[i].timestamp, ctime(&details.st_mtime));
 			//MD5
 
-			cout<<server_file_structure[i].name<<endl;
+			// cout<<server_file_structure[i].name<<endl;
 
 			if(check_directory(server_file_structure[i].type))
 				MD5(server_file_structure[i].name, server_file_structure[i].checksum);
 			else
-				strcpy(server_file_structure[i].checksum, "                                ");
+				strcpy(server_file_structure[i].checksum, "                                \0");
 		}
 		server_file_count = i-1;
 		closedir(dir);
@@ -259,7 +257,6 @@ int startServer(int server_port)
 					if(connection_type == 1)
 					{
 						send(connection_link, &server_file_count, sizeof(int), 0);
-						printf("%d\n", server_file_count);
 					}
 					else
 					{
@@ -269,15 +266,18 @@ int startServer(int server_port)
 					int i;
 					for(i = 0; i < server_file_count; i++)
 					{
-						cout<<i<<endl;
+						// cout<<i<<endl;
 						if(connection_type == 1)
 						{
 							send(connection_link, server_file_structure[i].name, 2048, 0);
 							send(connection_link, &server_file_structure[i].size, sizeof(int), 0);
 							send(connection_link, server_file_structure[i].type, 2048, 0);
+							// printf("%s %d\n", server_file_structure[i].type, strlen(server_file_structure[i].type));
 							send(connection_link, server_file_structure[i].timestamp, 200, 0);
-							send(connection_link, server_file_structure[i].checksum, strlen(server_file_structure[i].checksum), 0);
+							send(connection_link, server_file_structure[i].checksum, 33, 0);
 							
+
+
 						}
 						else
 						{
@@ -285,7 +285,7 @@ int startServer(int server_port)
 							sendto(sock, &server_file_structure[i].size, sizeof(int), 0, (struct sockaddr *)&client_address, sizeof(struct sockaddr));
 							sendto(sock, server_file_structure[i].type, 2048, 0, (struct sockaddr *)&client_address, sizeof(struct sockaddr));
 							sendto(sock, server_file_structure[i].timestamp, 200, 0, (struct sockaddr *)&client_address, sizeof(struct sockaddr));
-							sendto(sock, server_file_structure[i].checksum, strlen(server_file_structure[i].checksum), 0, (struct sockaddr *)&client_address, sizeof(struct sockaddr));
+							sendto(sock, server_file_structure[i].checksum, 33, 0, (struct sockaddr *)&client_address, sizeof(struct sockaddr));
 							
 						}
 					}
@@ -309,7 +309,7 @@ int main()
 
 	if(type == "tcp")
 		connection_type = 1;
-	else if(type == "tcp")
+	else if(type == "udp")
 		connection_type = 2;
 	else
 	{
@@ -320,8 +320,4 @@ int main()
 	startServer(server_port);
 
 	return 0;
-	// char str[1000];
-
-	// MD5("Makefile", str);
-	// return 0;
 }

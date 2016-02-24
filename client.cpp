@@ -138,30 +138,15 @@ int startClient(int server_port)
 			{
 				if(connection_type == 1)
 				{
-					received_bytes = recv(sock, received_data, 2048, 0);
-					received_data[received_bytes] = '\0';
-					strcpy(server_file_structure[i].name, received_data);
-					cout<<server_file_structure[i].name<<endl;
+					recv(sock, server_file_structure[i].name, 2048, 0);
 
 					recv(sock, &server_file_structure[i].size, sizeof(int), 0);
-					cout<<server_file_structure[i].size<<endl;
 
-					received_bytes = recv(sock, received_data, 2048, 0);
-					received_data[received_bytes] = '\0';
-					strcpy(server_file_structure[i].type, received_data);
-					cout<<server_file_structure[i].type<<endl;
-
-					received_bytes = recv(sock, received_data, 2048, 0);
-					received_data[received_bytes] = '\0';
-					strcpy(server_file_structure[i].timestamp, received_data);
-					cout<<server_file_structure[i].timestamp<<endl;
-
+					recv(sock, server_file_structure[i].type, 2048, 0);
+					
+					recv(sock, server_file_structure[i].timestamp, 200, 0);
 
 					recv(sock, server_file_structure[i].checksum, 33, 0);
-
-					printf("Checksum: %s\n", server_file_structure[i].checksum);
-					
-
 
 				}
 				else
@@ -169,13 +154,17 @@ int startClient(int server_port)
 					received_bytes = recvfrom(sock, received_data, 2048, 0, (struct sockaddr *)&server_address, temp);
 					received_data[received_bytes] = '\0';
 					strcpy(server_file_structure[i].name, received_data);
+
 					recvfrom(sock, &server_file_structure[i].size, sizeof(int), 0, (struct sockaddr *)&server_address, temp);
+
 					received_bytes = recvfrom(sock, received_data, 2048, 0, (struct sockaddr *)&server_address, temp);
 					received_data[received_bytes] = '\0';
 					strcpy(server_file_structure[i].type, received_data);
-					received_bytes = recvfrom(sock, received_data, 2048, 0, (struct sockaddr *)&server_address, temp);
+
+					received_bytes = recvfrom(sock, received_data, 200, 0, (struct sockaddr *)&server_address, temp);
 					received_data[received_bytes] = '\0';
 					strcpy(server_file_structure[i].timestamp, received_data);
+
 					recvfrom(sock, &server_file_structure[i].checksum, 33, 0, (struct sockaddr *)&server_address, temp);
 
 				}
@@ -196,6 +185,7 @@ int startClient(int server_port)
 						if(!strcmp(send_command[2], server_file_structure[i].name))
 						{
 							printf("File: %s\n", server_file_structure[i].name);
+							printf("Type: %s\n", server_file_structure[i].type);
 							printf("Checksum: %s\n", server_file_structure[i].checksum);
 							printf("Last Modified: %s", server_file_structure[i].timestamp);
 							break;
@@ -255,7 +245,7 @@ int main()
 
 	if(type == "tcp")
 		connection_type = 1;
-	else if(type == "tcp")
+	else if(type == "udp")
 		connection_type = 2;
 	else
 	{
