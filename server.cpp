@@ -26,11 +26,13 @@
 #include <openssl/md5.h>
 #include <sstream> 
 
+#define MD5_LENGTH 32
+
 using namespace std;
 
 struct filestructure
 {
-	char name[2048], type[2048], timestamp[200], checksum[MD5_DIGEST_LENGTH + 1];
+	char name[2048], type[2048], timestamp[200], checksum[MD5_LENGTH + 1];
 	int size;
 };
 
@@ -39,17 +41,6 @@ int connection_type, received_command_length, server_file_count = 0;
 char received_data[2048], initial_received_command[2048], received_command[50][100];
 
 struct filestructure server_file_structure[2048];
-
-// function to print MD5
-void printMD5(unsigned char* md, long size = MD5_DIGEST_LENGTH) 
-{
-	ostringstream os;
-    for (int i=0; i<size; i++) 
-    {
-        os<< hex << setw(2) << setfill('0') << (int) md[i];
-    }
-    cout<<os.str()<<endl;
-}
 
 // function to calculate MD5 checksum of a file
 int MD5(char *filename, char *checksum)
@@ -76,10 +67,14 @@ int MD5(char *filename, char *checksum)
 	unsigned char csum[MD5_DIGEST_LENGTH];
 	MD5((unsigned char *) memoryblock, filesize, csum);
 
-	// printMD5(csum);
-	strcpy(checksum, reinterpret_cast<const char *>(csum));
+	ostringstream os;
+    for (int i=0; i<size; i++) 
+    {
+        os<< hex << setw(2) << setfill('0') << (int) csum[i];
+    }
 
-	return (strlen(checksum) == MD5_DIGEST_LENGTH);
+    strcpy(checksum, (os.str()).c_str());
+	return (strlen(checksum) == 32);
 }
 
 void parse_request()
@@ -221,7 +216,7 @@ int startServer(int server_port)
 	{
 		sin_size = sizeof(struct sockaddr_in);
 		socklen_t *temp = (socklen_t *) &sin_size;
-		printf("1\n");
+		// printf("1\n");
 
 		if(connection_type == 1)
 		{
@@ -230,7 +225,7 @@ int startServer(int server_port)
 		}
 		while(1)
 		{
-			printf("2\n");
+			// printf("2\n");
 			if(connection_type == 1)
 			{
 				received_bytes = recv(connection_link, received_data, 2048, 0);
@@ -264,6 +259,7 @@ int startServer(int server_port)
 					if(connection_type == 1)
 					{
 						send(connection_link, &server_file_count, sizeof(int), 0);
+						printf("%d\n", server_file_count);
 					}
 					else
 					{
@@ -273,13 +269,14 @@ int startServer(int server_port)
 					int i;
 					for(i = 0; i < server_file_count; i++)
 					{
+						cout<<i<<endl;
 						if(connection_type == 1)
 						{
 							send(connection_link, server_file_structure[i].name, 2048, 0);
 							send(connection_link, &server_file_structure[i].size, sizeof(int), 0);
 							send(connection_link, server_file_structure[i].type, 2048, 0);
 							send(connection_link, server_file_structure[i].timestamp, 200, 0);
-							send(connection_link, server_file_structure[i].checksum, MD5_DIGEST_LENGTH, 0);
+							send(connection_link, server_file_structure[i].checksum, strlen(server_file_structure[i].checksum), 0);
 							
 						}
 						else
@@ -288,7 +285,7 @@ int startServer(int server_port)
 							sendto(sock, &server_file_structure[i].size, sizeof(int), 0, (struct sockaddr *)&client_address, sizeof(struct sockaddr));
 							sendto(sock, server_file_structure[i].type, 2048, 0, (struct sockaddr *)&client_address, sizeof(struct sockaddr));
 							sendto(sock, server_file_structure[i].timestamp, 200, 0, (struct sockaddr *)&client_address, sizeof(struct sockaddr));
-							sendto(sock, server_file_structure[i].checksum, MD5_DIGEST_LENGTH, 0, (struct sockaddr *)&client_address, sizeof(struct sockaddr));
+							sendto(sock, server_file_structure[i].checksum, strlen(server_file_structure[i].checksum), 0, (struct sockaddr *)&client_address, sizeof(struct sockaddr));
 							
 						}
 					}

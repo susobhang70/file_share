@@ -42,16 +42,6 @@ struct filestructure server_file_structure[2048];
 
 char input_command[2048], send_command[50][100], received_data[2048];
 
-void printMD5(char* md, long size = MD5_DIGEST_LENGTH) 
-{
-	ostringstream os;
-    for (int i=0; i<size; i++) 
-    {
-        os<< hex << setw(2) << setfill('0') << (int) md[i];
-    }
-    cout<<os.str()<<endl;
-}
-
 void get_input()
 {
 	char c;
@@ -135,7 +125,7 @@ int startClient(int server_port)
 			{
 				send(sock, input_command, sizeof(input_command), 0);
 				recv(sock, &server_file_count, sizeof(server_file_count), 0);
-
+				cout<<server_file_count<<endl;
 			}
 			else
 			{
@@ -152,6 +142,7 @@ int startClient(int server_port)
 					received_data[received_bytes] = '\0';
 					strcpy(server_file_structure[i].name, received_data);
 					cout<<server_file_structure[i].name<<endl;
+
 					recv(sock, &server_file_structure[i].size, sizeof(int), 0);
 					cout<<server_file_structure[i].size<<endl;
 
@@ -166,7 +157,11 @@ int startClient(int server_port)
 					cout<<server_file_structure[i].timestamp<<endl;
 
 
-					recv(sock, server_file_structure[i].checksum, MD5_DIGEST_LENGTH, 0);
+					recv(sock, server_file_structure[i].checksum, 33, 0);
+
+					printf("Checksum: %s\n", server_file_structure[i].checksum);
+					
+
 
 				}
 				else
@@ -181,7 +176,7 @@ int startClient(int server_port)
 					received_bytes = recvfrom(sock, received_data, 2048, 0, (struct sockaddr *)&server_address, temp);
 					received_data[received_bytes] = '\0';
 					strcpy(server_file_structure[i].timestamp, received_data);
-					recvfrom(sock, &server_file_structure[i].checksum, MD5_DIGEST_LENGTH, 0, (struct sockaddr *)&server_address, temp);
+					recvfrom(sock, &server_file_structure[i].checksum, 33, 0, (struct sockaddr *)&server_address, temp);
 
 				}
 
@@ -201,7 +196,7 @@ int startClient(int server_port)
 						if(!strcmp(send_command[2], server_file_structure[i].name))
 						{
 							printf("File: %s\n", server_file_structure[i].name);
-							printMD5(server_file_structure[i].checksum);
+							printf("Checksum: %s\n", server_file_structure[i].checksum);
 							printf("Last Modified: %s", server_file_structure[i].timestamp);
 							break;
 						}
