@@ -25,6 +25,7 @@
 #include <iomanip>
 #include <openssl/md5.h>
 #include <sstream> 
+#include <regex.h>
 
 using namespace std;
 
@@ -32,15 +33,21 @@ struct filestructure
 {
 	char name[2048], type[2048], timestamp[200], checksum[1000];
 	int size;
+	time_t rawtimestamp;
 };
 
 struct hostent *host;
+
+time_t time1, time2;
+struct tm *temptime1, *temptime2;
 
 int connection_type, send_command_count = 0;
 
 struct filestructure server_file_structure[2048];
 
 char input_command[2048], send_command[50][100], received_data[2048];
+
+regex_t regex;
 
 void get_input()
 {
@@ -218,7 +225,124 @@ int startClient(int server_port)
 			}
 		}
 
+		else if(!strcmp(send_command[0], "IndexGet"))
+		{
+			if(connection_type == 1)
+			{
+				send(sock, input_command, sizeof(input_command), 0);
+				recv(sock, &server_file_count, sizeof(server_file_count), 0);
+				// cout<<server_file_count<<endl;
+			}
+			else
+			{
+				sendto(sock, input_command, sizeof(input_command), 0,(struct sockaddr *)&server_address, sizeof(struct sockaddr));
+				recvfrom(sock, &server_file_count, sizeof(server_file_count), 0, (struct sockaddr *)&server_address, temp);
+			}
 
+			int length = server_file_count;
+			for(int i = 0; i < length; i++)
+			{
+				if(connection_type == 1)
+				{
+					recv(sock, server_file_structure[i].name, 2048, 0);
+
+					recv(sock, &server_file_structure[i].size, sizeof(int), 0);
+
+					recv(sock, server_file_structure[i].type, 2048, 0);
+					
+					recv(sock, server_file_structure[i].timestamp, 200, 0);
+
+					recv(sock, &server_file_structure[i].rawtimestamp, sizeof(time_t), 0);
+					
+
+				}
+				else
+				{
+					received_bytes = recvfrom(sock, received_data, 2048, 0, (struct sockaddr *)&server_address, temp);
+					received_data[received_bytes] = '\0';
+					strcpy(server_file_structure[i].name, received_data);
+
+					recvfrom(sock, &server_file_structure[i].size, sizeof(int), 0, (struct sockaddr *)&server_address, temp);
+
+					received_bytes = recvfrom(sock, received_data, 2048, 0, (struct sockaddr *)&server_address, temp);
+					received_data[received_bytes] = '\0';
+					strcpy(server_file_structure[i].type, received_data);
+
+					received_bytes = recvfrom(sock, received_data, 200, 0, (struct sockaddr *)&server_address, temp);
+					received_data[received_bytes] = '\0';
+					strcpy(server_file_structure[i].timestamp, received_data);
+
+					recvfrom(sock, &server_file_structure[i].rawtimestamp, sizeof(time_t), 0, (struct sockaddr *)&server_address, temp);
+
+				}
+
+			}
+
+			if(!strcmp(send_command[1], "longlist"))
+			{
+				int i;
+				for(i = 0; i < length; i++)
+				{
+					printf("File: %s\n", server_file_structure[i].name);
+					printf("Type: %s\n", server_file_structure[i].type);
+					printf("Last Modified: %s\n", server_file_structure[i].timestamp);
+					// printf("RawTimeStamp:%d\n\n", server_file_structure[i].rawtimestamp);
+				}
+			}
+
+			else if(!strcmp(send_command[1], "regex"))
+			{
+				int reti, i;
+				char msgbuf[100];
+				reti = regcomp(&regex, send_command[2], 0);
+
+				if (reti) 
+				{
+				    fprintf(stderr, "Could not compile regex\n");
+				    exit(1);
+				}
+
+				for(i = 0; i < length; i++)
+				{
+					reti = regexec(&regex, server_file_structure[i].name, 0, NULL, 0);
+					if (!reti) 
+					{
+					    printf("File: %s\n", server_file_structure[i].name);
+						printf("Type: %s\n", server_file_structure[i].type);
+						printf("Last Modified: %s\n", server_file_structure[i].timestamp);
+					}
+					else if (reti == REG_NOMATCH) 
+					{
+					    continue;
+					}
+					else 
+					{
+					    regerror(reti, &regex, msgbuf, sizeof(msgbuf));
+					    fprintf(stderr, "Regex match failed: %s\n", msgbuf);
+					    exit(1);
+					}
+				}
+
+				/* Free memory allocated to the pattern buffer by regcomp() */
+				regfree(&regex);
+			}
+
+			else if(!strcmp(send_command[1], "shortlist"))
+			{
+				if(!strcmp(send_command[2], "") || !strcmp(send_command[3], ""))
+				{
+					printf("Error: Missing filename argument\n");
+				}
+				
+				else
+				{
+					get_dates();
+
+				}	
+
+			}
+
+		}
 
 		get_input();
 	}

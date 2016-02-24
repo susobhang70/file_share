@@ -25,6 +25,7 @@
 #include <iomanip>
 #include <openssl/md5.h>
 #include <sstream> 
+#include <ctime>
 
 #define MD5_LENGTH 32
 
@@ -34,6 +35,7 @@ struct filestructure
 {
 	char name[2048], type[2048], timestamp[200], checksum[MD5_LENGTH + 1];
 	int size;
+	time_t rawtimestamp;
 };
 
 int connection_type, received_command_length, server_file_count = 0;
@@ -144,6 +146,8 @@ void sync_files()
 			strcpy(server_file_structure[i].type, input.c_str());
 
 			strcpy(server_file_structure[i].timestamp, ctime(&details.st_mtime));
+
+			server_file_structure[i].rawtimestamp = details.st_mtime;
 			//MD5
 
 			// cout<<server_file_structure[i].name<<endl;
@@ -314,12 +318,8 @@ int startServer(int server_port)
 							send(connection_link, server_file_structure[i].name, 2048, 0);
 							send(connection_link, &server_file_structure[i].size, sizeof(int), 0);
 							send(connection_link, server_file_structure[i].type, 2048, 0);
-							// printf("%s %d\n", server_file_structure[i].type, strlen(server_file_structure[i].type));
 							send(connection_link, server_file_structure[i].timestamp, 200, 0);
-							send(connection_link, server_file_structure[i].checksum, 33, 0);
-							
-
-
+							send(connection_link, &server_file_structure[i].rawtimestamp, sizeof(time_t), 0);
 						}
 						else
 						{
@@ -327,7 +327,7 @@ int startServer(int server_port)
 							sendto(sock, &server_file_structure[i].size, sizeof(int), 0, (struct sockaddr *)&client_address, sizeof(struct sockaddr));
 							sendto(sock, server_file_structure[i].type, 2048, 0, (struct sockaddr *)&client_address, sizeof(struct sockaddr));
 							sendto(sock, server_file_structure[i].timestamp, 200, 0, (struct sockaddr *)&client_address, sizeof(struct sockaddr));
-							sendto(sock, server_file_structure[i].checksum, 33, 0, (struct sockaddr *)&client_address, sizeof(struct sockaddr));
+							sendto(sock, &server_file_structure[i].rawtimestamp, sizeof(time_t), 0, (struct sockaddr *)&client_address, sizeof(struct sockaddr));
 							
 						}
 					}
