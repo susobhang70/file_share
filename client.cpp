@@ -1,28 +1,81 @@
 #include <stdio.h>
-#include <stdlib.h>
-#include <unistd.h>
-#include <errno.h>
 #include <string.h>
+#include <sys/socket.h>
+#include <sys/stat.h>
+#include <ctype.h>
+#include <fcntl.h>
+#include <sstream>
+#include <algorithm>
+#include <iterator>
 #include <netdb.h>
 #include <sys/types.h>
 #include <netinet/in.h>
-#include <sys/socket.h>
-#include <iostream>
 #include <arpa/inet.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <errno.h>
+#include <iostream>
+#include <string>
+#include <vector>
+#include <ctype.h>
+#include <fstream>
+#include <stddef.h>
+#include <dirent.h>
+#include <signal.h>
+#include <iomanip>
+#include <openssl/md5.h>
+#include <sstream> 
 
 using namespace std;
 
+struct filestructure
+{
+	char name[2048], type[2048], timestamp[200], checksum[1000];
+	int size;
+};
+
 struct hostent *host;
 
-int connection_type;
+int connection_type, send_command_count = 0;
 
-void get_Input(char *str)
+struct filestructure server_file_structure[2048];
+
+char input_command[2048], send_command[50][100], received_data[2048];
+
+void printMD5(char* md, long size = MD5_DIGEST_LENGTH) 
 {
+	ostringstream os;
+    for (int i=0; i<size; i++) 
+    {
+        os<< hex << setw(2) << setfill('0') << (int) md[i];
+    }
+    cout<<os.str()<<endl;
+}
+
+void get_input()
+{
+	char c;
+	int count = 0;
+
+	scanf("%c", &c);
+
+	while(c!='\n')
+	{
+		input_command[count++] = c;
+		scanf("%c",&c);
+	}
+
+	input_command[count++] = '\0';
+	count = 0;
+	send_command_count = 0;
+
 	char * pch;
-	pch = strtok (str," ,.-");
+	pch = strtok (input_command," ,.-");
 	while (pch != NULL)
 	{
-		printf ("%s\n",pch);
+		strcpy(send_command[send_command_count], pch);
+		// printf ("%s\n", send_command[send_command_count]);
+		send_command_count++;
 		pch = strtok (NULL, " ,.-");
 	}
 
@@ -30,7 +83,7 @@ void get_Input(char *str)
 
 int startClient(int server_port)
 {
-	int sock, sin_size, link;
+	int sock, sin_size, link, server_file_count, received_bytes;
 
 	struct sockaddr_in server_address, client_address;
 
@@ -72,6 +125,103 @@ int startClient(int server_port)
 		printf("Client connected to port %d\n", server_port);
 	}
 
+	get_input();
+
+	while(strcmp(send_command[0], "exit"))
+	{
+		if(!strcmp(send_command[0], "FileHash"))
+		{
+			if(connection_type == 1)
+			{
+				send(sock, input_command, sizeof(input_command), 0);
+				recv(sock, &server_file_count, sizeof(server_file_count), 0);
+
+			}
+			else
+			{
+				sendto(sock, input_command, sizeof(input_command), 0,(struct sockaddr *)&server_address, sizeof(struct sockaddr));
+				recvfrom(sock, &server_file_count, sizeof(server_file_count), 0, (struct sockaddr *)&server_address, temp);
+			}
+
+			int length = server_file_count;
+			for(int i = 0; i < length; i++)
+			{
+				if(connection_type == 1)
+				{
+					received_bytes = recv(sock, received_data, 2048, 0);
+					received_data[received_bytes] = '\0';
+					strcpy(server_file_structure[i].name, received_data);
+					cout<<server_file_structure[i].name<<endl;
+					recv(sock, &server_file_structure[i].size, sizeof(int), 0);
+					cout<<server_file_structure[i].size<<endl;
+
+					received_bytes = recv(sock, received_data, 2048, 0);
+					received_data[received_bytes] = '\0';
+					strcpy(server_file_structure[i].type, received_data);
+					cout<<server_file_structure[i].type<<endl;
+
+					received_bytes = recv(sock, received_data, 2048, 0);
+					received_data[received_bytes] = '\0';
+					strcpy(server_file_structure[i].timestamp, received_data);
+					cout<<server_file_structure[i].timestamp<<endl;
+
+
+					recv(sock, server_file_structure[i].checksum, MD5_DIGEST_LENGTH, 0);
+
+				}
+				else
+				{
+					received_bytes = recvfrom(sock, received_data, 2048, 0, (struct sockaddr *)&server_address, temp);
+					received_data[received_bytes] = '\0';
+					strcpy(server_file_structure[i].name, received_data);
+					recvfrom(sock, &server_file_structure[i].size, sizeof(int), 0, (struct sockaddr *)&server_address, temp);
+					received_bytes = recvfrom(sock, received_data, 2048, 0, (struct sockaddr *)&server_address, temp);
+					received_data[received_bytes] = '\0';
+					strcpy(server_file_structure[i].type, received_data);
+					received_bytes = recvfrom(sock, received_data, 2048, 0, (struct sockaddr *)&server_address, temp);
+					received_data[received_bytes] = '\0';
+					strcpy(server_file_structure[i].timestamp, received_data);
+					recvfrom(sock, &server_file_structure[i].checksum, MD5_DIGEST_LENGTH, 0, (struct sockaddr *)&server_address, temp);
+
+				}
+
+			}
+
+			if(!strcmp(send_command[1], "verify"))
+			{
+				if(!strcmp(send_command[2], ""))
+				{
+					printf("Error: Missing filename argument\n");
+				}
+				else
+				{
+					int i;
+					for(i = 0; i < length; i++)
+					{
+						if(!strcmp(send_command[2], server_file_structure[i].name))
+						{
+							printf("File: %s\n", server_file_structure[i].name);
+							printMD5(server_file_structure[i].checksum);
+							printf("Last Modified: %s", server_file_structure[i].timestamp);
+							break;
+						}
+					}
+
+					if(i == length)
+					{
+						printf("Error: No such file exists in server directory\n");
+					}
+				}
+			}
+		}
+
+
+
+		get_input();
+	}
+
+	close(sock);
+
 }
 
 
@@ -83,7 +233,7 @@ int main()
 	getline(cin,temp);
 	strcpy (str, temp.c_str());
 	int local_port, server_port;
-	get_Input(str);
+	get_input();
 	*/
 
 	int server_port;
@@ -103,12 +253,6 @@ int main()
 
 	cout<<"Enter server port to connect to: ";
 	cin>>server_port;
-
-	// cout<<"Enter client port to connect through (input 0 to select default 27666 as port): ";
-	// cin>>local_port;
-
-	// if(local_port == 0)
-	// 	local_port = 27666;
 
 	string type;
 	cout<<"Connection Type (tcp/udp)? ";
