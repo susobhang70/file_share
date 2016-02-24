@@ -15,9 +15,9 @@
 
 using namespace std;
 
-int connection_type;
+int connection_type, received_command_length;
 
-char received_data[2048];
+char received_data[2048], initial_received_command[2048], received_command[50][100];
 
 void parse_request()
 {
@@ -99,11 +99,16 @@ int startServer(int server_port)
 
 			parse_request();
 
-			if (!received_bytes || strcmp(received_data, "exit") == 0)
+			if (!received_bytes || !strcmp(received_data, "exit"))
 			{
 				printf("Connection closed\n");
 				close(link);
 				break;
+			}
+
+			else
+			{
+
 			}
 		}
 	}
