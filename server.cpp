@@ -12,6 +12,9 @@
 #include <signal.h>
 #include <iostream>
 #include <string>
+#include <iomanip>
+#include <fstream>
+#include <openssl/md5.h>
 
 using namespace std;
 
@@ -26,6 +29,41 @@ int connection_type, received_command_length, server_file_count = 0;
 char received_data[2048], initial_received_command[2048], received_command[50][100];
 
 struct filestructure server_file_structure[2048];
+
+// function to print MD5
+void printMD5(unsigned char* md, long size = MD5_DIGEST_LENGTH) {
+    for (int i=0; i<size; i++) {
+        cout<< hex << setw(2) << setfill('0') << (int) md[i];
+    }
+}
+
+// function to calculate MD5 checksum of a file
+int MD5(char *filename, char *checksum)
+{
+	ifstream::pos_type filesize;
+	char *memoryblock;
+
+	ifstream file(filename, ios::ate);
+
+	if(!file.is_open()){
+		cout<<"Unable to open\t"<<filename<<endl;
+		return 0;
+	}
+
+	filesize = file.tellg();
+	memoryblock = new char[filesize];
+	file.seekg(0, ios::beg);
+	file.read(memoryblock, filesize);
+	file.close();
+
+	unsigned char csum[MD5_DIGEST_LENGTH];
+	MD5((unsigned char *) memoryblock, filesize, csum);
+
+	printMD5(csum);
+	strcpy(checksum, reinterpret_cast<const char *>(csum));
+
+	return (strlen(checksum) == MD5_DIGEST_LENGTH);
+}
 
 void parse_request()
 {
@@ -181,7 +219,7 @@ int startServer(int server_port)
 
 				if(!strcmp(received_command[0], "FileHash"))
 				{
-					sync_files();
+					//sync_files();
 
 					if(connection_type == 1)
 					{
@@ -196,7 +234,6 @@ int startServer(int server_port)
 
 int main()
 {
-	
 	int server_port;
 	cout<<"Enter server port: ";
 	cin>>server_port;
@@ -216,6 +253,6 @@ int main()
 	}
 
 	startServer(server_port);
-
+	
 	return 0;
 }
