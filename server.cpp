@@ -17,9 +17,16 @@ using namespace std;
 
 int connection_type;
 
+char received_data[2048];
+
+void parse_request()
+{
+	return;
+}
+
 int startServer(int server_port)
 {
-	int sock, sin_size, link;
+	int sock, sin_size, link, received_bytes;
 
 	struct sockaddr_in server_address, client_address;
 
@@ -74,6 +81,30 @@ int startServer(int server_port)
 		{
 			link = accept(sock, (struct sockaddr *)&client_address, temp);
 			printf("Client connected from %s:%d", inet_ntoa(client_address.sin_addr), ntohs(client_address.sin_port));
+		}
+		while(1)
+		{
+			if(connection_type == 1)
+			{
+				received_bytes = recv(link, received_data, 2048, 0);
+
+			}
+			else if(connection_type == 2)
+			{
+				received_bytes = recvfrom(sock, received_data, 2048, 0,(struct sockaddr *)&client_address, temp);
+				
+			}
+
+			received_data[received_bytes] = '\0';
+
+			parse_request();
+
+			if (!received_bytes || strcmp(received_data, "exit") == 0)
+			{
+				printf("Connection closed\n");
+				close(link);
+				break;
+			}
 		}
 	}
 
