@@ -41,6 +41,7 @@ struct filestructure
 int connection_type, received_command_length, server_file_count = 0;
 
 char received_data[2048], initial_received_command[2048], received_command[50][100];
+char send_data[2048];
 
 struct filestructure server_file_structure[2048];
 
@@ -127,8 +128,7 @@ void sync_files()
 			struct stat details;
 			stat(ep->d_name, &details);
 
-			int size = details.st_size;
-			server_file_structure[i].size = size;
+			server_file_structure[i].size = details.st_size;
 
 			char file_details_command[100];
 
@@ -144,6 +144,9 @@ void sync_files()
 			file_details.close();
 
 			strcpy(server_file_structure[i].type, input.c_str());
+
+			strcpy(file_details_command, "rm file_details");
+			system(file_details_command);
 
 			strcpy(server_file_structure[i].timestamp, ctime(&details.st_mtime));
 
@@ -280,8 +283,6 @@ int startServer(int server_port)
 							send(connection_link, server_file_structure[i].timestamp, 200, 0);
 							send(connection_link, server_file_structure[i].checksum, 33, 0);
 							
-
-
 						}
 						else
 						{
@@ -331,6 +332,166 @@ int startServer(int server_port)
 							
 						}
 					}
+				}
+
+				else if(!strcmp(received_command[0], "FileDownload"))
+				{
+					ifstream ifile(received_command[2]);
+
+					int c_type, c_link, new_sock;
+
+					struct sockaddr_in cl_address;
+
+					if(ifile)
+					{
+
+						if(!strcmp(received_command[1], "tcp"))
+						{
+							if(connection_type == 1)
+							{
+								send(connection_link, "Success", 2048, 0);
+								c_type = 1;
+								c_link = connection_link;
+								
+							}
+						}
+
+						else if(!strcmp(received_command[1], "udp"))
+						{
+							if(connection_type == 2)
+							{
+								sendto(sock, "Success", 2048, 0,(struct sockaddr *)&client_address, sizeof(struct sockaddr));
+								c_type = 2;
+								cl_address = client_address;
+								new_sock = sock;
+							}
+						}
+						else
+						{
+							printf("Error: Invalid argument. Usage: FileDownload <tcp/udp> filename");
+							if(connection_type == 1)
+							{
+								send(connection_link, "File not found", 2048, 0);
+							}
+
+							else
+							{
+								sendto(sock, "File not found", 2048, 0, (struct sockaddr *)&client_address, sizeof(struct sockaddr));
+							}
+
+							continue;
+						}
+
+						char file_details_command[100];
+
+						strcpy(file_details_command, "file ");
+						strcat(file_details_command, received_command[2]);
+						strcat(file_details_command, "> file_details");
+						system(file_details_command);
+
+						ifstream file_details;
+						string input;
+						file_details.open("file_details");
+						getline(file_details, input);
+						file_details.close();
+
+						strcpy(file_details_command, "rm file_details");
+						system(file_details_command);
+
+						char tempstr[2048];
+						strcpy(tempstr, input.c_str());
+
+						if(!check_directory(tempstr))
+						{
+							printf("Error calculating checksum.\n");
+							if (c_type == 1)
+							{
+								send (c_link, "File is directory, can't calc md5", 33, 0);
+							}
+							else
+							{
+								sendto(new_sock, tempstr, 33, 0,(struct sockaddr *)&cl_address, sizeof(struct sockaddr));
+							}
+							continue;
+						}
+
+						else
+						{
+							MD5(received_command[2], tempstr);
+							printf("File checksum: %s\n", tempstr);
+						}
+
+						char c;
+						int count;
+						FILE *fp;
+						fp = fopen(received_command[2], "r");
+
+						if (c_type == 1)
+						{
+							send (c_link, tempstr, 33, 0);
+						}
+						else
+						{
+							sendto(new_sock, tempstr, 33, 0,(struct sockaddr *)&cl_address, sizeof(struct sockaddr));
+						}
+
+
+						while(fscanf(fp, "%c",&c) != EOF)
+						{
+							count = 0;
+							send_data[count++] = c;
+
+							while(count < 2048 && fscanf(fp, "%c",&c) != EOF)
+							{
+								send_data[count++] = c;
+							}
+
+							if (c_type == 1)
+							{
+								send (c_link, &count, sizeof(int), 0);
+								send (c_link, send_data, 2048,0);
+							}
+							else
+							{
+								sendto(new_sock, &count, sizeof(int), 0,(struct sockaddr *)&cl_address, sizeof(struct sockaddr));
+								sendto(new_sock, send_data, 2048, 0,(struct sockaddr *)&cl_address, sizeof(struct sockaddr));
+
+							}
+						}
+							
+						int garbage = 0;
+
+						if(c_type == 1)
+						{
+							send(c_link, &garbage, sizeof(int), 0);
+							send(c_link, "eof", 2048, 0);
+
+						}
+
+						else
+						{
+							sendto(new_sock, &garbage, sizeof(int), 0, (struct sockaddr *)&cl_address, sizeof(struct sockaddr));
+							sendto(new_sock, "eof", 2048, 0,(struct sockaddr *)&cl_address, sizeof(struct sockaddr));
+
+						}
+
+					}
+					else
+					{
+						printf("Error: Invalid argument. Usage: FileDownload <tcp/udp> filename");
+						if(connection_type == 1)
+						{
+							send(connection_link, "File not found", 2048, 0);
+						}
+
+						else
+						{
+							sendto(sock, "File not found", 2048, 0, (struct sockaddr *)&client_address, sizeof(struct sockaddr));
+						}
+
+						continue;
+					}
+
 				}
 			}
 		}

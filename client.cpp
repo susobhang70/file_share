@@ -49,6 +49,38 @@ char input_command[2048], send_command[50][100], received_data[2048];
 
 regex_t regex;
 
+int MD5(char *filename, char *checksum)
+{
+	ifstream::pos_type filesize;
+	char *memoryblock;
+
+	ifstream file(filename, ios::ate);
+
+	if(!file.is_open())
+	{
+		cout<<"Unable to open\t"<<filename<<endl;
+		return 0;
+	}
+
+	filesize = file.tellg();
+	memoryblock = new char[filesize];
+	file.seekg(0, ios::beg);
+	file.read(memoryblock, filesize);
+	file.close();
+
+	unsigned char csum[MD5_DIGEST_LENGTH];
+	MD5((unsigned char *) memoryblock, filesize, csum);
+
+	ostringstream os;
+    for (int i=0; i<MD5_DIGEST_LENGTH; i++) 
+    {
+        os<< hex << setw(2) << setfill('0') << (int) csum[i];
+    }
+
+    strcpy(checksum, (os.str()).c_str());
+	return (strlen(checksum) == 32);
+}
+
 void get_input()
 {
 	char c;
@@ -71,13 +103,13 @@ void get_input()
 	char temp[2048];
 	strcpy(temp, input_command);
 	char * pch;
-	pch = strtok (temp," ,.-");
+	pch = strtok (temp," ");
 	while (pch != NULL)
 	{
 		strcpy(send_command[send_command_count], pch);
 		// printf ("%s\n", send_command[send_command_count]);
 		send_command_count++;
-		pch = strtok (NULL, " ,.-");
+		pch = strtok (NULL, " ");
 	}
 
 }
@@ -336,12 +368,143 @@ int startClient(int server_port)
 				
 				else
 				{
-					get_dates();
+					// get_dates();
 
 				}	
 
 			}
 
+		}
+
+		else if(!strcmp(send_command[0], "FileDownload"))
+		{
+			if(send_command_count < 3)
+			{
+				printf("Error : missing arguments for download\n");
+				get_input();
+				continue;
+			}
+			else
+			{
+				int c_type, c_link, new_sock;
+
+				struct sockaddr_in s_address;
+
+
+				if(!strcmp(send_command[1], "tcp"))
+				{
+					if(connection_type == 1)
+					{
+						c_type = 1;
+						new_sock = sock;
+					}
+
+					send(new_sock, input_command, sizeof(input_command), 0);
+					received_bytes = recv(new_sock, received_data, 2048, 0);
+
+				}
+				else if(!strcmp(send_command[1], "udp"))
+				{
+					if(connection_type == 2)
+					{
+						c_type = 2;
+						new_sock = sock;
+						s_address = server_address;
+					}
+					sendto(new_sock, input_command, sizeof(input_command), 0, (struct sockaddr *)&s_address, sizeof(struct sockaddr));
+					received_bytes = recvfrom(new_sock, received_data, 2048, 0, (struct sockaddr *)&s_address, temp);
+
+				}
+				else
+				{
+					printf("Error: Invalid Input\n");
+					get_input();
+					continue;
+				}
+
+				received_data[received_bytes] = '\0';
+				if(strcmp(received_data, "File not found") != 0)
+				{
+					if(c_type == 1)
+					{
+						recv(new_sock, received_data, 33, 0);
+					}
+					else
+					{
+						received_bytes = recvfrom(new_sock, received_data, 33, 0, (struct sockaddr *)&s_address, temp);
+						received_data[received_bytes] = '\0';
+
+					}
+
+					if(strcmp(received_data, "File is directory, can't calc md5") != 0)
+					{
+						char incoming_md5[33];
+						strcpy(incoming_md5, received_data);
+
+						int incoming_size;
+
+						if(c_type == 1)
+						{
+							recv (new_sock, &incoming_size, sizeof(int), 0);
+							received_bytes = recv(new_sock, received_data, 2048, 0);
+
+						}
+						else
+						{
+							recvfrom(new_sock, &incoming_size, sizeof(int), 0,(struct sockaddr *)&s_address, temp);
+							received_bytes = recvfrom (new_sock, received_data, 2048, 0,(struct sockaddr *)&s_address, temp);
+
+						}
+
+						FILE *fp;
+						fp = fopen(send_command[2], "w");
+
+						while(strcmp(received_data, "eof"))
+						{
+							for (int i = 0; i < incoming_size; i++)
+							{
+								fprintf(fp,"%c",received_data[i]);
+							}
+
+							if(c_type == 1)
+							{
+								recv(sock, &incoming_size, sizeof(int), 0);
+								received_bytes = recv(sock, received_data, 2048, 0);
+
+							}
+							else
+							{
+								recvfrom(sock, &incoming_size, sizeof(int), 0, (struct sockaddr *)&s_address, temp);
+								received_bytes = recvfrom(sock, received_data, 2048, 0, (struct sockaddr *)&s_address, temp);
+							}
+							received_data[received_bytes] = '\0';
+						}
+
+						printf("#######\n");
+
+						fclose(fp);
+
+						char new_checksum[33];
+
+						MD5(send_command[2], new_checksum);
+
+						if(!strcmp(incoming_md5, new_checksum))
+						{
+							printf("MD5 Checksum matched! File download complete.\n");
+						}
+						else
+						{
+							printf("Checksum didn't match. Download failed.\n");
+						}
+					}
+				}
+				else
+				{
+					printf("File not found\n");
+					get_input();
+					continue;
+				}
+			}
 		}
 
 		get_input();
