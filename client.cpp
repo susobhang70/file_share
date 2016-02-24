@@ -47,6 +47,8 @@ void get_input()
 	char c;
 	int count = 0;
 
+	cout<<"$> ";
+
 	scanf("%c", &c);
 
 	while(c!='\n')
@@ -185,9 +187,8 @@ int startClient(int server_port)
 						if(!strcmp(send_command[2], server_file_structure[i].name))
 						{
 							printf("File: %s\n", server_file_structure[i].name);
-							printf("Type: %s\n", server_file_structure[i].type);
 							printf("Checksum: %s\n", server_file_structure[i].checksum);
-							printf("Last Modified: %s", server_file_structure[i].timestamp);
+							printf("Last Modified: %s\n\n", server_file_structure[i].timestamp);
 							break;
 						}
 					}
@@ -197,6 +198,21 @@ int startClient(int server_port)
 						printf("Error: No such file exists in server directory\n");
 					}
 				}
+			}
+
+			else if(!strcmp(send_command[1], "checkall"))
+			{
+				int i;
+				for(i = 0; i < length; i++)
+				{
+					printf("File: %s\n", server_file_structure[i].name);
+					printf("Checksum: %s\n", server_file_structure[i].checksum);
+					printf("Last Modified: %s\n\n", server_file_structure[i].timestamp);
+				}
+			}
+			else
+			{
+				printf("Error: Invalid arguments\n");
 			}
 		}
 
