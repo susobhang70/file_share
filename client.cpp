@@ -480,8 +480,6 @@ int startClient(int server_port)
 							received_data[received_bytes] = '\0';
 						}
 
-						printf("#######\n");
-
 						fclose(fp);
 
 						char new_checksum[33];
