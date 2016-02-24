@@ -15,9 +15,17 @@
 
 using namespace std;
 
-int connection_type, received_command_length;
+struct filestructure
+{
+	char name[2048], type[200], timestamp[200], checksum[1000];
+	int size;
+};
+
+int connection_type, received_command_length, server_file_count = 0;
 
 char received_data[2048], initial_received_command[2048], received_command[50][100];
+
+struct filestructure server_file_structure[2048];
 
 void parse_request()
 {
@@ -35,6 +43,54 @@ void parse_request()
 	
 	strcpy(initial_received_command, received_data);
 	return;
+}
+
+// have to change this shit
+void sync_files()
+{
+	int i;
+	DIR *dir;
+	struct dirent *ep;
+
+	dir = opendir("./");
+	if (dir)
+	{
+		for(i = 0; (ep = readdir(dir)); i++) 
+		{
+			strcpy(server_file_structure[i].name, ep->d_name);
+
+			struct stat details;
+			stat(ep->d_name, &details);
+
+			server_file_structure[i].size = details.st_size;
+
+			char inCommand[100];
+
+			strcpy(inCommand,"file ");
+			strcat(inCommand, server_file_structure[i].name);
+			strcat(inCommand, "> filetype");
+			system(inCommand);
+
+			ifstream input;
+			string line;
+			input.open("filetype");
+			getline(input, line);
+			input.close();
+			//type
+			strcpy(server_file_structure[i].type, line.c_str());
+
+			//time
+			strcpy(server_file_structure[i].timestamp, ctime(&details.st_mtime));
+			//MD5
+			// calcMD5(server_file_structure[i].name, server_file_structure[i].filemd5);
+		}
+		server_file_count = i-1;
+		closedir(dir);
+	}
+	else
+	{
+		printf("\n Error : could not open directory.\n");
+	}
 }
 
 int startServer(int server_port)
@@ -121,7 +177,17 @@ int startServer(int server_port)
 
 			else
 			{
+				printf("Client Request : %s\n", initial_received_command);
 
+				if(!strcmp(received_command[0], "FileHash"))
+				{
+					sync_files();
+
+					if(connection_type == 1)
+					{
+						send(link, &server_file_count, sizeof(int), 0);
+					}
+				}
 			}
 		}
 	}
