@@ -21,6 +21,19 @@ char received_data[2048], initial_received_command[2048], received_command[50][1
 
 void parse_request()
 {
+	strcpy(initial_received_command, received_data);
+	
+	received_command_length = 0;
+	char *temp;
+	temp = strtok(initial_received_command," ,.-");
+	
+	while(temp != NULL){
+		strcpy(received_command[received_command_length], temp);
+		received_command_length ++ ;
+		temp = strtok(NULL," ,.-");
+	}
+	
+	strcpy(initial_received_command, received_data);
 	return;
 }
 
@@ -117,6 +130,7 @@ int startServer(int server_port)
 
 int main()
 {
+	
 	int server_port;
 	cout<<"Enter server port: ";
 	cin>>server_port;
