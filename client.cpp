@@ -61,8 +61,10 @@ void get_input()
 	count = 0;
 	send_command_count = 0;
 
+	char temp[2048];
+	strcpy(temp, input_command);
 	char * pch;
-	pch = strtok (input_command," ,.-");
+	pch = strtok (temp," ,.-");
 	while (pch != NULL)
 	{
 		strcpy(send_command[send_command_count], pch);

@@ -290,6 +290,48 @@ int startServer(int server_port)
 						}
 					}
 				}
+
+
+				else if(!strcmp(received_command[0], "IndexGet"))
+				{
+					sync_files();
+
+					if(connection_type == 1)
+					{
+						send(connection_link, &server_file_count, sizeof(int), 0);
+					}
+					else
+					{
+						sendto(sock, &server_file_count, sizeof(int), 0,(struct sockaddr *)&client_address, sizeof(struct sockaddr));
+					}
+
+					int i;
+					for(i = 0; i < server_file_count; i++)
+					{
+						// cout<<i<<endl;
+						if(connection_type == 1)
+						{
+							send(connection_link, server_file_structure[i].name, 2048, 0);
+							send(connection_link, &server_file_structure[i].size, sizeof(int), 0);
+							send(connection_link, server_file_structure[i].type, 2048, 0);
+							// printf("%s %d\n", server_file_structure[i].type, strlen(server_file_structure[i].type));
+							send(connection_link, server_file_structure[i].timestamp, 200, 0);
+							send(connection_link, server_file_structure[i].checksum, 33, 0);
+							
+
+
+						}
+						else
+						{
+							sendto(sock, server_file_structure[i].name, 2048, 0, (struct sockaddr *)&client_address, sizeof(struct sockaddr));
+							sendto(sock, &server_file_structure[i].size, sizeof(int), 0, (struct sockaddr *)&client_address, sizeof(struct sockaddr));
+							sendto(sock, server_file_structure[i].type, 2048, 0, (struct sockaddr *)&client_address, sizeof(struct sockaddr));
+							sendto(sock, server_file_structure[i].timestamp, 200, 0, (struct sockaddr *)&client_address, sizeof(struct sockaddr));
+							sendto(sock, server_file_structure[i].checksum, 33, 0, (struct sockaddr *)&client_address, sizeof(struct sockaddr));
+							
+						}
+					}
+				}
 			}
 		}
 	}
