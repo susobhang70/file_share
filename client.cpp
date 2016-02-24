@@ -41,7 +41,8 @@ struct hostent *host;
 ofstream client_log_file_pointer;
 
 time_t time1, time2;
-struct tm *temptime1, *temptime2;
+struct tm *temptime;
+
 
 int connection_type, send_command_count = 0;
 
@@ -50,6 +51,56 @@ struct filestructure server_file_structure[2048];
 char input_command[2048], send_command[50][100], received_data[2048], send_data[2048];
 
 regex_t regex;
+
+void get_dates()
+{
+
+	time(&time1);
+ 	temptime = localtime ( &time1 );
+
+	char *temp = new char[100];
+	strcpy(temp, send_command[2]);
+	int tempcount = 0;
+	
+	char *pch;
+	pch = strtok (temp,"-");
+	while (pch != NULL)
+	{
+		
+		if(tempcount == 0)
+			temptime -> tm_year = atoi(pch) - 1900;
+		else if(tempcount == 1)
+			temptime -> tm_mon = atoi(pch) - 1;
+		else
+			temptime -> tm_mday = atoi(pch);
+	
+		tempcount ++;
+		pch = strtok (NULL, "-");
+	}
+
+	time1 = mktime(temptime);
+	
+	time(&time2);
+ 	temptime = localtime ( &time2 );
+
+	strcpy(temp, send_command[3]);
+	tempcount = 0;
+	pch = strtok (temp,"-");
+	while (pch != NULL)
+	{
+		if(tempcount == 0)
+			temptime -> tm_year = atoi(pch) - 1900;
+		else if(tempcount == 1)
+			temptime -> tm_mon = atoi(pch) - 1;
+		else
+			temptime -> tm_mday = atoi(pch);
+
+		tempcount ++;
+		pch = strtok (NULL, "-");
+	}
+
+	time2 = mktime(temptime);
+}
 
 int check_directory(char *type)
 {
@@ -388,9 +439,22 @@ int startClient(int server_port)
 				
 				else
 				{
-					// get_dates();
+					get_dates();
+					int i;
+					for(i = 0; i < length; i++)
+					{
+						time_t maxtime = max(time1, time2);
+						time_t mintime = min(time1, time2);
+						
+						if(difftime(server_file_structure[i].rawtimestamp, mintime) >= 0 && difftime(maxtime, server_file_structure[i].rawtimestamp) >= 0)
+						{
+							printf("File: %s\n", server_file_structure[i].name);
+							printf("Type: %s\n", server_file_structure[i].type);
+							printf("Last Modified: %s\n", server_file_structure[i].timestamp);
+						}
+					}
 
-				}	
+				}
 
 			}
 			else
