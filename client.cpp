@@ -45,9 +45,24 @@ int connection_type, send_command_count = 0;
 
 struct filestructure server_file_structure[2048];
 
-char input_command[2048], send_command[50][100], received_data[2048];
+char input_command[2048], send_command[50][100], received_data[2048], send_data[2048];
 
 regex_t regex;
+
+int check_directory(char *type)
+{
+	char temp[2048];
+	strcpy(temp, type);
+	char * pch;
+	pch = strtok (temp," ");
+	while (pch != NULL)
+	{
+		if(!strcmp(pch, "directory"))
+			return 0;
+		pch = strtok (NULL, " ");
+	}
+	return 1;
+}
 
 int MD5(char *filename, char *checksum)
 {
@@ -373,6 +388,10 @@ int startClient(int server_port)
 				}	
 
 			}
+			else
+			{
+				printf("Error: Invalid arguments. Usage: IndexGet <flag> <parameter>\n");
+			}
 
 		}
 
@@ -502,6 +521,111 @@ int startClient(int server_port)
 					get_input();
 					continue;
 				}
+			}
+		}
+
+		else if(!strcmp(send_command[0], "FileUpload"))
+		{
+			ifstream ifile(send_command[1]);
+			if (ifile)
+			{
+				if (connection_type == 1)
+				{
+					send(sock, input_command, 2048, 0);
+				}
+				else
+				{
+					sendto(sock, input_command, 2048, 0, (struct sockaddr *)&server_address, sizeof(struct sockaddr));
+				}
+
+				char file_details_command[100];
+
+				strcpy(file_details_command, "file ");
+				strcat(file_details_command, send_command[2]);
+				strcat(file_details_command, "> file_details_2");
+				system(file_details_command);
+
+				ifstream file_details;
+				string input;
+				file_details.open("file_details_2");
+				getline(file_details, input);
+				file_details.close();
+
+				strcpy(file_details_command, "rm file_details_2");
+				system(file_details_command);
+
+				char tempstr[2048], sending_checksum[33];
+				strcpy(tempstr, input.c_str());
+
+				if (!check_directory(send_command[1]))
+				{
+					printf("Error: Cannot upload directory\n");
+					get_input();
+					continue;
+				}
+				else
+				{
+					MD5(send_command[1], sending_checksum);
+					printf ("Check sum for file to be uploaded: %s\n", sending_checksum);
+				}
+
+				int count;
+				char c;
+				FILE *fp = fopen(send_command[1], "r");
+
+				if (connection_type == 1)
+				{
+					send(sock, sending_checksum, 33, 0);
+				}
+				else
+				{
+					sendto(sock, sending_checksum, 33, 0, (struct sockaddr *)&server_address, sizeof(struct sockaddr));
+				}
+
+				while(fscanf(fp,"%c",&c) != EOF)
+				{
+					count = 0;
+					send_data[count] = c;
+					count++;
+
+					while (count < 2048 && fscanf(fp, "%c", &c) != EOF)
+					{
+						send_data[count] = c;
+						count++;
+					}
+
+					if (connection_type == 1)
+					{
+						send(sock, &count, sizeof(int), 0);
+						send (sock, send_data, 2048, 0);
+
+					}
+					else
+					{
+						sendto(sock, &count, sizeof(int), 0, (struct sockaddr *)&server_address, sizeof(struct sockaddr));
+						sendto (sock, send_data, 2048, 0, (struct sockaddr *)&server_address, sizeof(struct sockaddr));
+
+					}
+				}
+
+				int garbage = 0;
+
+				if (connection_type == 1)
+				{
+					send(sock, &garbage, sizeof(int), 0);
+					send(sock, "eof", 2048, 0);
+
+				}
+				else
+				{
+					sendto(sock, &garbage, sizeof(int), 0,(struct sockaddr *)&server_address, sizeof(struct sockaddr));
+					sendto(sock, "eof", 2048, 0, (struct sockaddr *)&server_address, sizeof(struct sockaddr));
+
+				}
+			}
+			else
+			{
+				printf("\n Error : No such file or directory.\n");
 			}
 		}
 

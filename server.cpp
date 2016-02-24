@@ -493,6 +493,71 @@ int startServer(int server_port)
 					}
 
 				}
+
+				else if(!strcmp(received_command[0], "FileUpload"))
+				{
+					char incoming_checksum[33], received_file_checksum[33];
+					if(connection_type == 1)
+					{
+						recv(connection_link, incoming_checksum, 33, 0);
+						recv(connection_link, &received_command_length, sizeof(int), 0);
+						received_bytes = recv(connection_link, received_data, 2048, 0);
+						received_data[received_bytes] = '\0';
+
+					}
+					
+					else
+					{
+						recvfrom(sock, incoming_checksum, 33, 0, (struct sockaddr *)&client_address, temp);
+						recvfrom(sock, &received_command_length, sizeof(int), 0, (struct sockaddr *)&client_address, temp);
+						received_bytes = recvfrom(sock, received_data, 2048, 0, (struct sockaddr *)&client_address, temp);
+						received_data[received_bytes] = '\0';
+						
+					}
+
+					FILE *fp = fopen(received_command[1], "w");
+					while(strcmp(received_data, "eof") != 0)
+					{
+						for (int i = 0; i < received_command_length; i++)
+						{
+							fprintf(fp, "%c", received_data[i]);
+						}
+
+						if (connection_type == 1)
+						{
+							recv(connection_link, &received_command_length, sizeof(int), 0);
+							received_bytes = recv(connection_link, received_data, 2048, 0);
+						}
+						else
+						{
+							recvfrom(sock, &received_command_length, sizeof(int), 0,(struct sockaddr *)&client_address, temp);
+							received_bytes = recvfrom(sock, received_data, 2048, 0, (struct sockaddr *)&client_address, temp);
+
+						}
+
+						received_data[received_bytes] = '\0';
+					}
+
+					fclose(fp);
+
+					printf("MD5 Checksum of uploaded file : %s\n", incoming_checksum);
+
+					MD5(received_command[1], received_file_checksum);
+
+					printf("MD5 checksum of recieved file : %s\n", received_file_checksum);
+
+					if (strcmp(incoming_checksum, received_file_checksum))
+					{
+						printf("Error : MD5 Checksum didn't match! :(\n");
+
+					}
+
+					else
+					{
+						printf("MD5 matched! File successfully uploaded\n");
+					}
+
+				}
 			}
 		}
 	}
