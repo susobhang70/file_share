@@ -379,7 +379,8 @@ int startClient(int server_port)
 					recvfrom(sock, &temp1, sizeof(int), 0, (struct sockaddr *)&server_address, temp);
 					recvfrom(sock, server_file_structure[i].timestamp, temp1, 0, (struct sockaddr *)&server_address, temp);
 
-					recvfrom(sock, &server_file_structure[i].rawtimestamp, sizeof(time_t), 0, (struct sockaddr *)&server_address, temp);
+					recvfrom(sock, &temp1, sizeof(int), 0, (struct sockaddr *)&server_address, temp);
+					recvfrom(sock, &server_file_structure[i].rawtimestamp, temp1, 0, (struct sockaddr *)&server_address, temp);
 
 				}
 
@@ -392,7 +393,7 @@ int startClient(int server_port)
 				{
 					printf("File: %s\n", server_file_structure[i].name);
 					printf("Type: %s\n", server_file_structure[i].type);
-					// printf("Size: %d\n", server_file_structure[i].size);
+					printf("Size: %d\n", server_file_structure[i].size);
 					printf("Last Modified: %s\n", server_file_structure[i].timestamp);
 					// printf("RawTimeStamp:%d\n\n", server_file_structure[i].rawtimestamp);
 				}
