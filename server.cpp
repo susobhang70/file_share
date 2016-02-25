@@ -128,7 +128,8 @@ void sync_files()
 			struct stat details;
 			stat(ep->d_name, &details);
 
-			server_file_structure[i].size = details.st_size;
+			int size = details.st_size;
+			server_file_structure[i].size = size;
 
 			char file_details_command[100];
 
@@ -145,22 +146,17 @@ void sync_files()
 
 			strcpy(server_file_structure[i].type, input.c_str());
 
-			strcpy(file_details_command, "rm file_details");
-			system(file_details_command);
-
 			strcpy(server_file_structure[i].timestamp, ctime(&details.st_mtime));
 
 			server_file_structure[i].rawtimestamp = details.st_mtime;
 			//MD5
 
-			// cout<<server_file_structure[i].name<<endl;
-
 			if(check_directory(server_file_structure[i].type))
 				MD5(server_file_structure[i].name, server_file_structure[i].checksum);
 			else
-				strcpy(server_file_structure[i].checksum, "                                \0");
+				strcpy(server_file_structure[i].checksum, "-\0");
 		}
-		server_file_count = i-1;
+		server_file_count = i;
 		closedir(dir);
 	}
 	else
@@ -221,7 +217,6 @@ int startServer(int server_port)
 	{
 		sin_size = sizeof(struct sockaddr_in);
 		socklen_t *temp = (socklen_t *) &sin_size;
-		// printf("1\n");
 
 		if(connection_type == 1)
 		{
@@ -230,7 +225,6 @@ int startServer(int server_port)
 		}
 		while(1)
 		{
-			// printf("2\n");
 			if(connection_type == 1)
 			{
 				received_bytes = recv(connection_link, received_data, 2048, 0);
@@ -255,7 +249,10 @@ int startServer(int server_port)
 
 			else
 			{
-				printf("Client Request : %s\n", initial_received_command);
+				if(!strcmp(initial_received_command, ""))
+					continue;
+				else
+					printf("Client Request : %s\n", initial_received_command);
 
 				if(!strcmp(received_command[0], "FileHash"))
 				{
@@ -273,15 +270,26 @@ int startServer(int server_port)
 					int i;
 					for(i = 0; i < server_file_count; i++)
 					{
-						// cout<<i<<endl;
 						if(connection_type == 1)
 						{
-							send(connection_link, server_file_structure[i].name, 2048, 0);
+							int temp = strlen(server_file_structure[i].name);
+							send(connection_link, &(temp), sizeof(int), 0);
+							send(connection_link, server_file_structure[i].name, temp, 0);
+
 							send(connection_link, &server_file_structure[i].size, sizeof(int), 0);
-							send(connection_link, server_file_structure[i].type, 2048, 0);
-							// printf("%s %d\n", server_file_structure[i].type, strlen(server_file_structure[i].type));
-							send(connection_link, server_file_structure[i].timestamp, 200, 0);
-							send(connection_link, server_file_structure[i].checksum, 33, 0);
+
+							temp = strlen(server_file_structure[i].type);
+							send(connection_link, &(temp), sizeof(int), 0);
+							send(connection_link, server_file_structure[i].type, temp, 0);
+
+							temp = strlen(server_file_structure[i].timestamp);
+							send(connection_link, &(temp), sizeof(int), 0);
+							send(connection_link, server_file_structure[i].timestamp, temp, 0);
+
+							temp = strlen(server_file_structure[i].checksum);
+							send(connection_link, &(temp), sizeof(int), 0);
+							send(connection_link, server_file_structure[i].checksum, temp, 0);
+
 							
 						}
 						else
@@ -313,7 +321,6 @@ int startServer(int server_port)
 					int i;
 					for(i = 0; i < server_file_count; i++)
 					{
-						// cout<<i<<endl;
 						if(connection_type == 1)
 						{
 							int temp = strlen(server_file_structure[i].name);
