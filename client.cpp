@@ -239,7 +239,6 @@ int startClient(int server_port)
 			{
 				send(sock, input_command, sizeof(input_command), 0);
 				recv(sock, &server_file_count, sizeof(server_file_count), 0);
-				cout<<server_file_count<<endl;
 			}
 			else
 			{
@@ -252,15 +251,30 @@ int startClient(int server_port)
 			{
 				if(connection_type == 1)
 				{
-					recv(sock, server_file_structure[i].name, 2048, 0);
+					int temp;
+					recv(sock, &temp, sizeof(int), 0);
+					recv(sock, server_file_structure[i].name, temp, 0);
+					server_file_structure[i].name[temp] = '\0';
 
 					recv(sock, &server_file_structure[i].size, sizeof(int), 0);
 
-					recv(sock, server_file_structure[i].type, 2048, 0);
+					recv(sock, &temp, sizeof(int), 0);
+					recv(sock, server_file_structure[i].type, temp, 0);
+					server_file_structure[i].type[temp] = '\0';
 					
-					recv(sock, server_file_structure[i].timestamp, 200, 0);
+					recv(sock, &temp, sizeof(int), 0);
+					recv(sock, server_file_structure[i].timestamp, temp, 0);
+					server_file_structure[i].timestamp[temp] = '\0';
 
-					recv(sock, server_file_structure[i].checksum, 33, 0);
+					temp = 0;
+					recv(sock, &temp, sizeof(int), 0);
+					if(temp > 32)
+						temp = 32;
+					recv(sock, server_file_structure[i].checksum, temp, 0);
+					server_file_structure[i].checksum[temp] = '\0';
+
+
+
 
 				}
 				else
@@ -300,7 +314,7 @@ int startClient(int server_port)
 						{
 							printf("File: %s\n", server_file_structure[i].name);
 							printf("Checksum: %s\n", server_file_structure[i].checksum);
-							printf("Last Modified: %s\n\n", server_file_structure[i].timestamp);
+							printf("Last Modified: %s\n", server_file_structure[i].timestamp);
 							break;
 						}
 					}
@@ -315,11 +329,12 @@ int startClient(int server_port)
 			else if(!strcmp(send_command[1], "checkall"))
 			{
 				int i;
+
 				for(i = 0; i < length; i++)
 				{
 					printf("File: %s\n", server_file_structure[i].name);
 					printf("Checksum: %s\n", server_file_structure[i].checksum);
-					printf("Last Modified: %s\n\n", server_file_structure[i].timestamp);
+					printf("Last Modified: %s\n", server_file_structure[i].timestamp);
 				}
 			}
 			else
@@ -349,16 +364,18 @@ int startClient(int server_port)
 				{
 					int temp;
 					recv(sock, &temp, sizeof(int), 0);
-
 					recv(sock, server_file_structure[i].name, temp, 0);
+					server_file_structure[i].name[temp] = '\0';
 
 					recv(sock, &server_file_structure[i].size, sizeof(int), 0);
 
 					recv(sock, &temp, sizeof(int), 0);
 					recv(sock, server_file_structure[i].type, temp, 0);
+					server_file_structure[i].type[temp] = '\0';
 					
 					recv(sock, &temp, sizeof(int), 0);
 					recv(sock, server_file_structure[i].timestamp, temp, 0);
+					server_file_structure[i].timestamp[temp] = '\0';
 
 					recv(sock, &server_file_structure[i].rawtimestamp, sizeof(time_t), 0);
 					
