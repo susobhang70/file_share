@@ -347,13 +347,18 @@ int startClient(int server_port)
 			{
 				if(connection_type == 1)
 				{
-					recv(sock, server_file_structure[i].name, 2048, 0);
+					int temp;
+					recv(sock, &temp, sizeof(int), 0);
+
+					recv(sock, server_file_structure[i].name, temp, 0);
 
 					recv(sock, &server_file_structure[i].size, sizeof(int), 0);
 
-					recv(sock, server_file_structure[i].type, 2048, 0);
+					recv(sock, &temp, sizeof(int), 0);
+					recv(sock, server_file_structure[i].type, temp, 0);
 					
-					recv(sock, server_file_structure[i].timestamp, 200, 0);
+					recv(sock, &temp, sizeof(int), 0);
+					recv(sock, server_file_structure[i].timestamp, temp, 0);
 
 					recv(sock, &server_file_structure[i].rawtimestamp, sizeof(time_t), 0);
 					
@@ -388,6 +393,7 @@ int startClient(int server_port)
 				{
 					printf("File: %s\n", server_file_structure[i].name);
 					printf("Type: %s\n", server_file_structure[i].type);
+					// printf("Size: %d\n", server_file_structure[i].size);
 					printf("Last Modified: %s\n", server_file_structure[i].timestamp);
 					// printf("RawTimeStamp:%d\n\n", server_file_structure[i].rawtimestamp);
 				}
