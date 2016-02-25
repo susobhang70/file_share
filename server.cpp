@@ -334,10 +334,20 @@ int startServer(int server_port)
 						}
 						else
 						{
-							sendto(sock, server_file_structure[i].name, 2048, 0, (struct sockaddr *)&client_address, sizeof(struct sockaddr));
+							int temp = strlen(server_file_structure[i].name);
+							sendto(sock, &temp, sizeof(int), 0, (struct sockaddr *)&client_address, sizeof(struct sockaddr));
+							sendto(sock, server_file_structure[i].name, temp, 0, (struct sockaddr *)&client_address, sizeof(struct sockaddr));
+
 							sendto(sock, &server_file_structure[i].size, sizeof(int), 0, (struct sockaddr *)&client_address, sizeof(struct sockaddr));
-							sendto(sock, server_file_structure[i].type, 2048, 0, (struct sockaddr *)&client_address, sizeof(struct sockaddr));
-							sendto(sock, server_file_structure[i].timestamp, 200, 0, (struct sockaddr *)&client_address, sizeof(struct sockaddr));
+
+							temp = strlen(server_file_structure[i].type);
+							sendto(sock, &temp, sizeof(int), 0, (struct sockaddr *)&client_address, sizeof(struct sockaddr));
+							sendto(sock, server_file_structure[i].type, temp, 0, (struct sockaddr *)&client_address, sizeof(struct sockaddr));
+
+							temp = strlen(server_file_structure[i].timestamp);
+							sendto(sock, &temp, sizeof(int), 0, (struct sockaddr *)&client_address, sizeof(struct sockaddr));
+							sendto(sock, server_file_structure[i].timestamp, temp, 0, (struct sockaddr *)&client_address, sizeof(struct sockaddr));
+							
 							sendto(sock, &server_file_structure[i].rawtimestamp, sizeof(time_t), 0, (struct sockaddr *)&client_address, sizeof(struct sockaddr));
 							
 						}

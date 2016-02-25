@@ -366,19 +366,18 @@ int startClient(int server_port)
 				}
 				else
 				{
-					received_bytes = recvfrom(sock, received_data, 2048, 0, (struct sockaddr *)&server_address, temp);
-					received_data[received_bytes] = '\0';
-					strcpy(server_file_structure[i].name, received_data);
+					int temp1; 
+
+					recvfrom(sock, &temp1, sizeof(int), 0, (struct sockaddr *)&server_address, temp);
+					recvfrom(sock, server_file_structure[i].name, temp1, 0, (struct sockaddr *)&server_address, temp);
 
 					recvfrom(sock, &server_file_structure[i].size, sizeof(int), 0, (struct sockaddr *)&server_address, temp);
 
-					received_bytes = recvfrom(sock, received_data, 2048, 0, (struct sockaddr *)&server_address, temp);
-					received_data[received_bytes] = '\0';
-					strcpy(server_file_structure[i].type, received_data);
+					recvfrom(sock, &temp1, sizeof(int), 0, (struct sockaddr *)&server_address, temp);
+					recvfrom(sock, server_file_structure[i].type, temp1, 0, (struct sockaddr *)&server_address, temp);
 
-					received_bytes = recvfrom(sock, received_data, 200, 0, (struct sockaddr *)&server_address, temp);
-					received_data[received_bytes] = '\0';
-					strcpy(server_file_structure[i].timestamp, received_data);
+					recvfrom(sock, &temp1, sizeof(int), 0, (struct sockaddr *)&server_address, temp);
+					recvfrom(sock, server_file_structure[i].timestamp, temp1, 0, (struct sockaddr *)&server_address, temp);
 
 					recvfrom(sock, &server_file_structure[i].rawtimestamp, sizeof(time_t), 0, (struct sockaddr *)&server_address, temp);
 
