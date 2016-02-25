@@ -316,10 +316,20 @@ int startServer(int server_port)
 						// cout<<i<<endl;
 						if(connection_type == 1)
 						{
-							send(connection_link, server_file_structure[i].name, 2048, 0);
+							int temp = strlen(server_file_structure[i].name);
+							send(connection_link, &(temp), sizeof(int), 0);
+							send(connection_link, server_file_structure[i].name, temp, 0);
+
 							send(connection_link, &server_file_structure[i].size, sizeof(int), 0);
-							send(connection_link, server_file_structure[i].type, 2048, 0);
-							send(connection_link, server_file_structure[i].timestamp, 200, 0);
+
+							temp = strlen(server_file_structure[i].type);
+							send(connection_link, &(temp), sizeof(int), 0);
+							send(connection_link, server_file_structure[i].type, temp, 0);
+
+							temp = strlen(server_file_structure[i].timestamp);
+							send(connection_link, &(temp), sizeof(int), 0);
+							send(connection_link, server_file_structure[i].timestamp, temp, 0);
+
 							send(connection_link, &server_file_structure[i].rawtimestamp, sizeof(time_t), 0);
 						}
 						else
