@@ -347,8 +347,10 @@ int startServer(int server_port)
 							temp = strlen(server_file_structure[i].timestamp);
 							sendto(sock, &temp, sizeof(int), 0, (struct sockaddr *)&client_address, sizeof(struct sockaddr));
 							sendto(sock, server_file_structure[i].timestamp, temp, 0, (struct sockaddr *)&client_address, sizeof(struct sockaddr));
-							
-							sendto(sock, &server_file_structure[i].rawtimestamp, sizeof(time_t), 0, (struct sockaddr *)&client_address, sizeof(struct sockaddr));
+
+							temp = sizeof(time_t);
+							sendto(sock, &temp, sizeof(int), 0, (struct sockaddr *)&client_address, sizeof(struct sockaddr));
+							sendto(sock, &server_file_structure[i].rawtimestamp, temp, 0, (struct sockaddr *)&client_address, sizeof(struct sockaddr));
 							
 						}
 					}
