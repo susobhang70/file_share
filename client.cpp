@@ -154,6 +154,8 @@ void get_input()
 	char c;
 	int count = 0;
 
+	strcpy(send_command[0], "");
+
 	cout<<"$> ";
 
 	scanf("%c", &c);
@@ -187,9 +189,9 @@ void get_input()
 
 int startClient(int server_port)
 {
-	int sock, sin_size, link, server_file_count, received_bytes;
+	int sock, udp_sock, sin_size, link, server_file_count, received_bytes;
 
-	struct sockaddr_in server_address, client_address;
+	struct sockaddr_in server_address, client_address, udp_server_address;
 
 	if(connection_type == 1)
 	{
@@ -199,6 +201,18 @@ int startClient(int server_port)
 			perror("Error");
 			return 1;
 		}
+
+		udp_sock = socket(AF_INET, SOCK_DGRAM, 0);
+		if(udp_sock == -1)
+		{
+			perror("Error");
+			return 1;
+		}
+
+		udp_server_address.sin_family = AF_INET;
+		udp_server_address.sin_port = htons(5060);
+		udp_server_address.sin_addr = *((struct in_addr *)host->h_addr);
+		bzero(&(udp_server_address.sin_zero), 8);
 	}
 
 	else if(connection_type == 2)
@@ -505,33 +519,109 @@ int startClient(int server_port)
 			}
 			else
 			{
-				int c_type, c_link, new_sock;
+				int c_type, c_link, new_sock, new_port;
 
 				struct sockaddr_in s_address;
 
-
 				if(!strcmp(send_command[1], "tcp"))
 				{
+					c_type = 1;
+
 					if(connection_type == 1)
 					{
-						c_type = 1;
 						new_sock = sock;
+						send(sock, input_command, sizeof(input_command), 0);
+						received_bytes = recv(sock, received_data, 2048, 0);
 					}
 
-					send(new_sock, input_command, sizeof(input_command), 0);
-					received_bytes = recv(new_sock, received_data, 2048, 0);
+					else
+					{
+						sendto(sock, input_command, sizeof(input_command), 0, (struct sockaddr *)&server_address, sizeof(struct sockaddr));
+						received_bytes = recvfrom(sock, received_data, 2048, 0, (struct sockaddr *)&server_address, temp);
+						cout<<"Enter new port to communicate with: ";
+						cin>>new_port;
+						sendto(sock, &new_port, sizeof(int), 0,(struct sockaddr *)&server_address, sizeof(struct sockaddr));
+
+						new_sock = socket(AF_INET, SOCK_STREAM, 0);
+						if(new_sock == -1)
+						{
+							perror("Error");
+							return 1;
+						}
+
+						s_address.sin_family = AF_INET;
+						s_address.sin_port = htons(new_port);
+						s_address.sin_addr = *((struct in_addr *)host->h_addr);
+						bzero(&(s_address.sin_zero), 8);
+
+						time_t start, end;
+						double dif;
+
+						time(&start);
+						time(&end);
+						dif = difftime(end, start);
+
+						while(connect(new_sock, (struct sockaddr *)&s_address, sizeof(struct sockaddr)) == -1 && dif < 3)
+						{
+							// printf ("Error: Unable to connect to server on port %d\n", new_port);
+							time(&end);
+							dif = difftime(end, start);
+						}
+
+						if(dif >= 3)
+						{
+							printf ("Request timed out: Unable to connect to server on port %d\n", new_port);
+							close(new_sock);
+							get_input();
+							continue;
+						}
+						
+					}	
 
 				}
 				else if(!strcmp(send_command[1], "udp"))
 				{
+					c_type = 2;
+
 					if(connection_type == 2)
 					{
-						c_type = 2;
+						sendto(sock, input_command, sizeof(input_command), 0, (struct sockaddr *)&server_address, sizeof(struct sockaddr));
+						received_bytes = recvfrom(sock, received_data, 2048, 0, (struct sockaddr *)&server_address, temp);
 						new_sock = sock;
 						s_address = server_address;
 					}
-					sendto(new_sock, input_command, sizeof(input_command), 0, (struct sockaddr *)&s_address, sizeof(struct sockaddr));
-					received_bytes = recvfrom(new_sock, received_data, 2048, 0, (struct sockaddr *)&s_address, temp);
+
+					else
+					{
+						// send(sock, input_command, sizeof(input_command), 0);
+						// recv(sock, received_data, 2048, 0);
+						new_sock = sock;
+						send(sock, input_command, sizeof(input_command), 0);
+						received_bytes = recv(sock, received_data, 2048, 0);
+						// sendto(udp_sock, input_command, sizeof(input_command), 0, (struct sockaddr *)&udp_server_address, sizeof(struct sockaddr));
+						// received_bytes = recvfrom(udp_sock, received_data, 2048, 0, (struct sockaddr *)&udp_server_address, temp);
+						// cout<<"Enter new port to communicate with: ";
+						// cin>>new_port;
+						// send(sock, &new_port, sizeof(int), 0);
+
+						// new_sock = socket(AF_INET, SOCK_DGRAM, 0);
+						// if(new_sock == -1)
+						// {
+						// 	perror("Error");
+						// 	return 1;
+						// }
+
+						// s_address.sin_family = AF_INET;
+						// s_address.sin_port = htons(new_port);
+						c_type = 1;
+						// s_address.sin_addr = *((struct in_addr *)host->h_addr);
+						// bzero(&(s_address.sin_zero), 8);
+
+						// send(sock, &new_port, sizeof(int), 0);
+						// cout<<received_data<<endl;
+						// new_sock = udp_sock;
+						// s_address = udp_server_address;
+					}
 
 				}
 				else
@@ -550,8 +640,14 @@ int startClient(int server_port)
 					}
 					else
 					{
-						received_bytes = recvfrom(new_sock, received_data, 33, 0, (struct sockaddr *)&s_address, temp);
-						received_data[received_bytes] = '\0';
+						// int in_size = 0;
+						// cout<<"Hello\n";
+						// recvfrom(new_sock, &in_size, sizeof(int), 0, (struct sockaddr *)&s_address, temp);
+						// cout<<in_size<<endl;
+						// exit(0);
+						// cout<<"Hello\n";
+						recvfrom(new_sock, received_data, 33, 0, (struct sockaddr *)&s_address, temp);
+						// cout<<"A"<<received_data<<endl;
 
 					}
 
@@ -614,10 +710,15 @@ int startClient(int server_port)
 							printf("Checksum didn't match. Download failed.\n");
 						}
 					}
+
+					if(connection_type != c_type && connection_type != 1)
+						close(new_sock);
 				}
 				else
 				{
 					printf("File not found\n");
+					if(connection_type != c_type && connection_type != 1)
+						close(new_sock);
 					get_input();
 					continue;
 				}

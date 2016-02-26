@@ -1,0 +1,43 @@
+
+localhost
+5000
+udp
+
+FileDownload tcp Makefile
+
+localhost
+5000
+udp
+
+IndexGet longlist
+FileDownload tcp Makefile
+
+localhost
+5000
+udp
+
+IndexGet longlist
+FileHash checkall
+IndexGet longlist
+FileDownload udp Makefile
+FileDownload tcp Makefile
+
+exit
+
+localhost
+5000
+tcp
+
+FileDownload udp localhost
+
+localhost
+5000
+tcp
+
+FileDownload udp Makefile
+
+localhost
+5000
+tcp
+
+FileDownload udp Makefile

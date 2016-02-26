@@ -167,9 +167,9 @@ void sync_files()
 
 int startServer(int server_port)
 {
-	int sock, sin_size, connection_link, received_bytes;
+	int sock, udp_sock, sin_size, connection_link, received_bytes;
 
-	struct sockaddr_in server_address, client_address;
+	struct sockaddr_in server_address, udp_server_address, client_address, udp_client_address;
 
 	if(connection_type == 1)
 	{
@@ -178,6 +178,24 @@ int startServer(int server_port)
 		{
 			perror("Error");
 			return 1;
+		}
+
+		udp_sock = socket(AF_INET, SOCK_DGRAM, 0);
+		if(udp_sock == -1)
+		{
+			perror("Error");
+			return 1;
+		}
+
+		udp_server_address.sin_family = AF_INET;
+		udp_server_address.sin_port = htons(5060);
+		udp_server_address.sin_addr.s_addr = INADDR_ANY;
+		bzero(&(udp_server_address.sin_zero), 8);
+
+		if (bind(udp_sock, (struct sockaddr *)&udp_server_address, sizeof(struct sockaddr)) == -1) 
+		{
+			perror("Error");
+			return 2;
 		}
 	}
 
@@ -294,21 +312,21 @@ int startServer(int server_port)
 						}
 						else
 						{
-							int temp = strlen(server_file_structure[i].name);
+							int temp = strlen(server_file_structure[i].name)+1;
 							sendto(sock, &temp, sizeof(int), 0, (struct sockaddr *)&client_address, sizeof(struct sockaddr));
 							sendto(sock, server_file_structure[i].name, temp, 0, (struct sockaddr *)&client_address, sizeof(struct sockaddr));
 
 							sendto(sock, &server_file_structure[i].size, sizeof(int), 0, (struct sockaddr *)&client_address, sizeof(struct sockaddr));
 
-							temp = strlen(server_file_structure[i].type);
+							temp = strlen(server_file_structure[i].type)+1;
 							sendto(sock, &temp, sizeof(int), 0, (struct sockaddr *)&client_address, sizeof(struct sockaddr));
 							sendto(sock, server_file_structure[i].type, temp, 0, (struct sockaddr *)&client_address, sizeof(struct sockaddr));
 
-							temp = strlen(server_file_structure[i].timestamp);
+							temp = strlen(server_file_structure[i].timestamp)+1;
 							sendto(sock, &temp, sizeof(int), 0, (struct sockaddr *)&client_address, sizeof(struct sockaddr));
 							sendto(sock, server_file_structure[i].timestamp, temp, 0, (struct sockaddr *)&client_address, sizeof(struct sockaddr));
 
-							temp = strlen(server_file_structure[i].checksum);
+							temp = strlen(server_file_structure[i].checksum)+1;
 							sendto(sock, &temp, sizeof(int), 0, (struct sockaddr *)&client_address, sizeof(struct sockaddr));
 							sendto(sock, server_file_structure[i].checksum, 33, 0, (struct sockaddr *)&client_address, sizeof(struct sockaddr));
 							
@@ -335,17 +353,17 @@ int startServer(int server_port)
 					{
 						if(connection_type == 1)
 						{
-							int temp = strlen(server_file_structure[i].name);
+							int temp = strlen(server_file_structure[i].name)+1;
 							send(connection_link, &(temp), sizeof(int), 0);
 							send(connection_link, server_file_structure[i].name, temp, 0);
 
 							send(connection_link, &server_file_structure[i].size, sizeof(int), 0);
 
-							temp = strlen(server_file_structure[i].type);
+							temp = strlen(server_file_structure[i].type)+1;
 							send(connection_link, &(temp), sizeof(int), 0);
 							send(connection_link, server_file_structure[i].type, temp, 0);
 
-							temp = strlen(server_file_structure[i].timestamp);
+							temp = strlen(server_file_structure[i].timestamp)+1;
 							send(connection_link, &(temp), sizeof(int), 0);
 							send(connection_link, server_file_structure[i].timestamp, temp, 0);
 
@@ -353,17 +371,17 @@ int startServer(int server_port)
 						}
 						else
 						{
-							int temp = strlen(server_file_structure[i].name);
+							int temp = strlen(server_file_structure[i].name)+1;
 							sendto(sock, &temp, sizeof(int), 0, (struct sockaddr *)&client_address, sizeof(struct sockaddr));
 							sendto(sock, server_file_structure[i].name, temp, 0, (struct sockaddr *)&client_address, sizeof(struct sockaddr));
 
 							sendto(sock, &server_file_structure[i].size, sizeof(int), 0, (struct sockaddr *)&client_address, sizeof(struct sockaddr));
 
-							temp = strlen(server_file_structure[i].type);
+							temp = strlen(server_file_structure[i].type)+1;
 							sendto(sock, &temp, sizeof(int), 0, (struct sockaddr *)&client_address, sizeof(struct sockaddr));
 							sendto(sock, server_file_structure[i].type, temp, 0, (struct sockaddr *)&client_address, sizeof(struct sockaddr));
 
-							temp = strlen(server_file_structure[i].timestamp);
+							temp = strlen(server_file_structure[i].timestamp)+1;
 							sendto(sock, &temp, sizeof(int), 0, (struct sockaddr *)&client_address, sizeof(struct sockaddr));
 							sendto(sock, server_file_structure[i].timestamp, temp, 0, (struct sockaddr *)&client_address, sizeof(struct sockaddr));
 
@@ -378,32 +396,104 @@ int startServer(int server_port)
 				{
 					ifstream ifile(received_command[2]);
 
-					int c_type, c_link, new_sock;
+					int c_type, c_link, new_sock, new_port;
 
-					struct sockaddr_in cl_address;
+					struct sockaddr_in cl_address, s_address;
 
 					if(ifile)
 					{
 
 						if(!strcmp(received_command[1], "tcp"))
 						{
+							c_type = 1;
+
 							if(connection_type == 1)
 							{
 								send(connection_link, "Success", 2048, 0);
-								c_type = 1;
 								c_link = connection_link;
-								
+							}
+							else
+							{
+								sendto(sock, "Success", 2048, 0,(struct sockaddr *)&client_address, sizeof(struct sockaddr));
+								recvfrom(sock, &new_port, sizeof(int), 0, (struct sockaddr *)&client_address, temp);
+								cout<<new_port<<endl;
+
+								new_sock = socket(AF_INET, SOCK_STREAM, 0);
+								if(new_sock == -1)
+								{
+									perror("Error");
+									return 1;
+								}
+
+								s_address.sin_family = AF_INET;
+								s_address.sin_port = htons(new_port);
+								s_address.sin_addr.s_addr = INADDR_ANY;
+								bzero(&(s_address.sin_zero), 8);
+
+								if (bind(new_sock, (struct sockaddr *)&s_address, sizeof(struct sockaddr)) == -1) 
+								{
+									perror("Error");
+									return 2;
+								}
+
+								if (listen(new_sock, 10) == -1)
+								{
+									printf("Error: Failed to listen\n");
+									return 3;
+								}
+
+								c_link = accept(new_sock, (struct sockaddr *)&cl_address, temp);
+								// printf("Client connected from %s:%d\n", inet_ntoa(cl_address.sin_addr), ntohs(cl_address.sin_port));
 							}
 						}
 
 						else if(!strcmp(received_command[1], "udp"))
 						{
+							c_type = 2;
+
 							if(connection_type == 2)
 							{
 								sendto(sock, "Success", 2048, 0,(struct sockaddr *)&client_address, sizeof(struct sockaddr));
-								c_type = 2;
 								cl_address = client_address;
 								new_sock = sock;
+							}
+
+							else
+							{
+								// send(connection_link, "Success", 2048, 0);
+								c_type = 1;
+								send(connection_link, "Success", 2048, 0);
+								// sendto(udp_sock, "Success", 2048, 0,(struct sockaddr *)&udp_client_address, sizeof(struct sockaddr));
+
+								// recv(sock, &new_port, sizeof(int), 0);
+
+								// new_sock = socket(AF_INET, SOCK_DGRAM, 0);
+								// if(new_sock == -1)
+								// {
+								// 	perror("Error");
+								// 	return 1;
+								// }
+
+								// s_address.sin_family = AF_INET;
+								// s_address.sin_port = htons(new_port);
+								// s_address.sin_addr.s_addr = INADDR_ANY;
+								// bzero(&(s_address.sin_zero), 8);
+
+								// if (bind(new_sock, (struct sockaddr *)&s_address, sizeof(struct sockaddr)) == -1) 
+								// {
+								// 	perror("Error");
+								// 	return 2;
+								// }
+
+
+								// int junk;
+								// recv(sock, &junk, sizeof(int), 0);		
+								// cout<<junk<<endl;	
+								c_link = connection_link;
+								
+								// cl_address = udp_client_address;
+								// new_sock = udp_sock;
+
 							}
 						}
 						else
@@ -450,7 +540,7 @@ int startServer(int server_port)
 							}
 							else
 							{
-								sendto(new_sock, tempstr, 33, 0,(struct sockaddr *)&cl_address, sizeof(struct sockaddr));
+								sendto(new_sock, "File is directory, can't calc md5", 33, 0,(struct sockaddr *)&cl_address, sizeof(struct sockaddr));
 							}
 							continue;
 						}
@@ -472,6 +562,11 @@ int startServer(int server_port)
 						}
 						else
 						{
+							// int out_size = strlen(tempstr);
+							// cout<<"Help\n";
+							// sleep(1);
+
+							// sendto(new_sock, &out_size, sizeof(int), 0, (struct sockaddr *)&cl_address, sizeof(struct sockaddr));
 							sendto(new_sock, tempstr, 33, 0,(struct sockaddr *)&cl_address, sizeof(struct sockaddr));
 						}
 
@@ -512,8 +607,10 @@ int startServer(int server_port)
 						{
 							sendto(new_sock, &garbage, sizeof(int), 0, (struct sockaddr *)&cl_address, sizeof(struct sockaddr));
 							sendto(new_sock, "eof", 2048, 0,(struct sockaddr *)&cl_address, sizeof(struct sockaddr));
-
 						}
+
+						if(connection_type != c_type && connection_type != 1)
+							close(new_sock);
 
 					}
 					else
