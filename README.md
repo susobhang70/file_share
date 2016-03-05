@@ -4,8 +4,8 @@
 - This is an Application Level File Sharing Protocol with support for download and upload for files and indexed searching. It is made using a client-server model, and uses either transport layer protocols tcp or udp (as per the user's input) to establish communication. It has MD5checksum incorporated into it to handle file transfer errors.
 
 ####To build
-`g++ server.cpp -o server -lcrypto`: to build server
-`g++ client.cpp -o client -lcrypto`: to build client
+- `g++ server.cpp -o server -lcrypto`: to build server
+- `g++ client.cpp -o client -lcrypto`: to build client
 
 ####To Use
 - The application has been designed with one server and one client.
@@ -18,7 +18,7 @@
   - Enter the `port` number you want your server to listen to
   - Enter the `protocol` - either `tcp` or `udp` for your server to use.
 
--The following commands are supported by the client side application:
+- The following commands are supported by the client side application:
 - `FileHash flag (args)`: This command indicates that the client wants to check if any of the files on the other end have been changed. The flag variable can take the values:
   - `verify`: this checks for the specific file name provided as command line argument and return its ‘checksum’ and ‘lastmodified’ timestamp. Usage - `FileHash verify <filename>`
   - `checkall`: Outputs filename, checksum and lastmodified timestamp of all the files in the shared directory
