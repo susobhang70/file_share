@@ -1,13 +1,13 @@
-#File-Share-Protocol
+# File-Share-Protocol
 
-####The Application
+#### The Application
 - This is an Application Level File Sharing Protocol with support for download and upload for files and indexed searching. It is made using a client-server model, and uses either transport layer protocols tcp or udp (as per the user's input) to establish communication. It has MD5checksum incorporated into it to handle file transfer errors.
 
-####To build
+#### To build
 - `g++ server.cpp -o server -lcrypto`: to build server
 - `g++ client.cpp -o client -lcrypto`: to build client
-
-####To Use
+ 
+#### To Use
 - The application has been designed with one server and one client.
   - `./client` to run the client first. Then,
     - First enter the `hostname` or `IP` of the machine you want to connect to
